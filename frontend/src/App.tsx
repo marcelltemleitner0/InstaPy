@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
+import { Search, HatGlasses } from "lucide-react";
 
 type Row = {
   id: number;
   username: string;
   follows_viewer: boolean;
 };
+
+const mockRows: Row[] = [
+  { id: 1, username: "johndoe", follows_viewer: true },
+  { id: 2, username: "janedoe", follows_viewer: false },
+  { id: 3, username: "alex_dev", follows_viewer: true },
+  { id: 4, username: "reactlover", follows_viewer: false },
+  { id: 5, username: "tailwindcss", follows_viewer: true },
+  { id: 6, username: "frontendguy", follows_viewer: false },
+  { id: 7, username: "typescriptfan", follows_viewer: true },
+  { id: 8, username: "ui_designer", follows_viewer: false },
+];
 
 type Filter = "all" | "mutual" | "ghost";
 
@@ -25,22 +37,30 @@ function SkeletonRow() {
 export default function DataTable() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [anonymous, setAnonymous] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("http://127.0.0.1:8000/instagram/following");
-        const data = await res.json();
-        setRows(data.results);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    // const fetchData = async () => {
+    //   try {
+    //     const res = await fetch("http://127.0.0.1:8000/instagram/following");
+    //     const data = await res.json();
+    //     setRows(data.results);
+    //   } catch (err) {
+    //     console.error("Fetch error:", err);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+    // fetchData();
+    //
+    const timer = setTimeout(() => {
+      setRows(mockRows);
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const mutual = rows.filter((r) => r.follows_viewer).length;
@@ -73,25 +93,18 @@ export default function DataTable() {
       </div>
 
       <div className="relative mb-4">
-        <svg
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
+        <Search
+          size={16}
           strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-          />
-        </svg>
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+
         <input
           type="text"
           placeholder="Search by username…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+          className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
         />
       </div>
 
@@ -133,7 +146,7 @@ export default function DataTable() {
               <div className="flex min-w-0 gap-x-4">
                 <div className="min-w-0 flex-auto">
                   <p className="text-sm/6 font-semibold text-gray-900">
-                    @{person.username}
+                    {anonymous ? "Instagram User" : `@${person.username}`}
                   </p>
                   <p className="mt-1 truncate text-xs/5 text-gray-400">
                     ID {person.id}
@@ -164,6 +177,13 @@ export default function DataTable() {
           ))
         )}
       </ul>
+
+      <button
+        onClick={() => setAnonymous((prev) => !prev)}
+        className="fixed bottom-6 right-6 flex size-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg hover:bg-gray-700 transition-colors"
+      >
+        {anonymous ? <HatGlasses size={24} strokeWidth={1.5} /> : "A"}
+      </button>
     </div>
   );
 }
