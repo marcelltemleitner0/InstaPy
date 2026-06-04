@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search, HatGlasses } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, HatGlasses, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Row = {
   id: number;
@@ -16,9 +16,15 @@ const mockRows: Row[] = [
   { id: 6, username: "frontendguy", follows_viewer: false },
   { id: 7, username: "typescriptfan", follows_viewer: true },
   { id: 8, username: "ui_designer", follows_viewer: false },
+  { id: 9, username: "nextjs_dev", follows_viewer: true },
+  { id: 10, username: "webbuilder", follows_viewer: false },
+  { id: 11, username: "designmaster", follows_viewer: true },
+  { id: 12, username: "fullstacklife", follows_viewer: false },
 ];
 
 type Filter = "all" | "mutual" | "ghost";
+
+const ITEMS_PER_PAGE = 10;
 
 function SkeletonRow() {
   return (
@@ -40,21 +46,10 @@ export default function DataTable() {
   const [anonymous, setAnonymous] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // const fetchData = async () => {
-    //   try {
-    //     const res = await fetch("http://127.0.0.1:8000/instagram/following");
-    //     const data = await res.json();
-    //     setRows(data.results);
-    //   } catch (err) {
-    //     console.error("Fetch error:", err);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    // fetchData();
-    //
     const timer = setTimeout(() => {
       setRows(mockRows);
       setLoading(false);
@@ -66,13 +61,31 @@ export default function DataTable() {
   const mutual = rows.filter((r) => r.follows_viewer).length;
   const ghosts = rows.filter((r) => !r.follows_viewer).length;
 
-  const filtered = rows
-    .filter((r) => r.username.toLowerCase().includes(search.toLowerCase()))
-    .filter((r) => {
-      if (filter === "mutual") return r.follows_viewer;
-      if (filter === "ghost") return !r.follows_viewer;
-      return true;
+  const filtered = useMemo(() => {
+    return rows
+      .filter((r) => r.username.toLowerCase().includes(search.toLowerCase()))
+      .filter((r) => {
+        if (filter === "mutual") return r.follows_viewer;
+        if (filter === "ghost") return !r.follows_viewer;
+        return true;
+      });
+  }, [rows, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+
+  const paginatedRows = filtered.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE,
+  );
+
+  const toggleRow = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
+  };
 
   const filters: { label: string; value: Filter; count: number }[] = [
     { label: "All", value: "all", count: rows.length },
@@ -87,25 +100,8 @@ export default function DataTable() {
           Following
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          {rows.length} accounts &mdash; {mutual} follow you back, {ghosts}{" "}
-          don&apos;t
+          {rows.length} accounts — {mutual} follow you back, {ghosts} don't
         </p>
-      </div>
-
-      <div className="relative mb-4">
-        <Search
-          size={16}
-          strokeWidth={1.5}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-        />
-
-        <input
-          type="text"
-          placeholder="Search by username…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-        />
       </div>
 
       <div className="mb-5 flex gap-2">
@@ -120,6 +116,7 @@ export default function DataTable() {
             }`}
           >
             {label}
+
             <span
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                 filter === value
@@ -133,22 +130,46 @@ export default function DataTable() {
         ))}
       </div>
 
+      <div className="relative mb-4">
+        <Search
+          size={16}
+          strokeWidth={1.5}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+
+        <input
+          type="text"
+          placeholder="Search by username..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+        />
+      </div>
+
       <ul role="list" className="divide-y divide-gray-100">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-        ) : filtered.length === 0 ? (
+        ) : paginatedRows.length === 0 ? (
           <li className="py-16 text-center text-sm text-gray-400">
             No accounts found
           </li>
         ) : (
-          filtered.map((person) => (
+          paginatedRows.map((person) => (
             <li key={person.id} className="flex justify-between gap-x-6 py-5">
-              <div className="flex min-w-0 gap-x-4">
+              <div className="flex min-w-0 gap-x-4 items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={selected.has(person.id)}
+                  onChange={() => toggleRow(person.id)}
+                  className="accent-black"
+                />
+
                 <div className="min-w-0 flex-auto">
-                  <p className="text-sm/6 font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-gray-900">
                     {anonymous ? "Instagram User" : `@${person.username}`}
                   </p>
-                  <p className="mt-1 truncate text-xs/5 text-gray-400">
+
+                  <p className="mt-1 truncate text-xs text-gray-400">
                     ID {person.id}
                   </p>
                 </div>
@@ -160,16 +181,16 @@ export default function DataTable() {
                     <div className="flex-none rounded-full bg-emerald-500/20 p-1">
                       <div className="size-1.5 rounded-full bg-emerald-500" />
                     </div>
-                    <p className="text-xs/5 text-gray-500">Follows you</p>
+
+                    <p className="text-xs text-gray-500">Follows you</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-x-1.5">
                     <div className="flex-none rounded-full bg-gray-300/40 p-1">
                       <div className="size-1.5 rounded-full bg-gray-400" />
                     </div>
-                    <p className="text-xs/5 text-gray-400">
-                      Doesn&apos;t follow back
-                    </p>
+
+                    <p className="text-xs text-gray-400">Doesn't follow back</p>
                   </div>
                 )}
               </div>
@@ -178,9 +199,47 @@ export default function DataTable() {
         )}
       </ul>
 
+      {!loading && filtered.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft size={16} />
+            Previous
+          </button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                onClick={() => setPage(num)}
+                className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
+                  page === num
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
       <button
         onClick={() => setAnonymous((prev) => !prev)}
-        className="fixed bottom-6 right-6 flex size-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg hover:bg-gray-700 transition-colors"
+        className="fixed bottom-6 right-6 flex size-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg transition-colors hover:bg-gray-700"
       >
         {anonymous ? <HatGlasses size={24} strokeWidth={1.5} /> : "A"}
       </button>

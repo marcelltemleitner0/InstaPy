@@ -64,3 +64,8 @@ class InstagramScanner:
                 time.sleep(1.5)
 
         return results
+
+    def unfollow(self, id):
+        url = f"https://www.instagram.com/api/v1/friendships/destroy/{id}/"
+        response = self.session.post(url)
+        return response
